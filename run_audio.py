@@ -5,21 +5,8 @@
 # otherwise use anaconda
 # https://pypi.python.org/pypi/opencv-python
 # sci-kit image
-from skimage.transform import rescale
-from skimage.transform import resize
-import scipy.misc
 import numpy as np
 # A bulk of keras and theano imports
-import theano
-from theano import shared, tensor as T
-from theano.tensor.nnet import conv2d, nnet
-from theano.tensor.signal import pool
-
-import keras
-from keras import backend as K
-from keras.utils.data_utils import get_file
-from keras.utils import np_utils
-from keras.utils.np_utils import to_categorical
 from keras.models import Sequential, Model
 from keras.layers import Input, Embedding, Reshape, merge, LSTM, Bidirectional
 from keras.layers import TimeDistributed, Activation, SimpleRNN, GRU
@@ -48,7 +35,6 @@ def fit(model, batches, val_batches, nb_epoch=1):
         nb_val_samples = val_batches.samples,
         callbacks = [early_stopping]
     )
-
 
 def imageGeneratorSugar(
     featurewise_center,
@@ -137,10 +123,12 @@ def getTestModelNormalize(inputShapeTuple, classNumber):
     model.compile(Adam(lr=1e-4), loss='categorical_crossentropy', metrics=['accuracy'])
     return model
 
+
 # With 512 pictures per batch and about 100 epochs, it should achieve a decent accuracy.
 batchSize = 128*4
 train_path = "data/audio/train"
 valid_path = "data/audio/test"
+result_path = "models/"
 train_batches = get_batches(train_path, genImage, batch_size=batchSize, imageSizeTuple = (64,200))
 valid_batches = get_batches(valid_path, genImage, batch_size=batchSize,  imageSizeTuple = (64,200))
 model2 = getTestModelNormalize(classNumber=132,inputShapeTuple=(64,200,3))
