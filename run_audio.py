@@ -7,34 +7,15 @@
 # sci-kit image
 import numpy as np
 # A bulk of keras and theano imports
-from keras.models import Sequential, Model
-from keras.layers import Input, Embedding, Reshape, merge, LSTM, Bidirectional
-from keras.layers import TimeDistributed, Activation, SimpleRNN, GRU
-from keras.layers.core import Flatten, Dense, Dropout, Lambda
+from keras.models import Sequential
+from keras.layers.core import Flatten, Dense
 from keras.layers.normalization import BatchNormalization
-from keras.optimizers import SGD, RMSprop, Adam
-from keras.metrics import categorical_crossentropy, categorical_accuracy
+from keras.optimizers import Adam
 from keras.layers.convolutional import *
-from keras.callbacks import ReduceLROnPlateau
-from keras.preprocessing import image, sequence
-from keras.preprocessing.text import Tokenizer
+from keras.preprocessing import image
 from keras.callbacks import EarlyStopping
 from keras import backend as K
-
-batchSize = 16
-
-# fit model
-early_stopping = EarlyStopping(monitor='val_loss', patience=2)
-
-def fit(model, batches, val_batches, nb_epoch=1):
-    model.fit_generator(
-        batches,
-        samples_per_epoch = batches.samples,
-        nb_epoch=nb_epoch,
-        validation_data=val_batches,
-        nb_val_samples = val_batches.samples,
-        callbacks = [early_stopping]
-    )
+import os
 
 def imageGeneratorSugar(
     featurewise_center,
@@ -71,7 +52,7 @@ def get_batches(
     dirname,
     gen=image.ImageDataGenerator(),
     shuffle=True,
-    batch_size=batchSize,
+    batch_size=16,
     class_mode='categorical',
     imageSizeTuple = (256,256),
     classes = None,
@@ -129,9 +110,10 @@ batchSize = 128*4
 train_path = "data/audio/train"
 valid_path = "data/audio/test"
 result_path = "models/"
+early_stopping = EarlyStopping(monitor='val_loss', patience=2)
 train_batches = get_batches(train_path, genImage, batch_size=batchSize, imageSizeTuple = (64,200))
 valid_batches = get_batches(valid_path, genImage, batch_size=batchSize,  imageSizeTuple = (64,200))
-model2 = getTestModelNormalize(classNumber=4,inputShapeTuple=(64,200,3))
+model2 = getTestModelNormalize(classNumber=4, inputShapeTuple=(64,200,3))
 #model2.optimizer.lr.set_value(1e-06)
 K.set_value(model2.optimizer.lr, 1e-06)
 model2.fit_generator(
@@ -143,6 +125,8 @@ model2.fit_generator(
     callbacks = [early_stopping]
 )
 
+if not os.path.exists(result_path):
+    os.makedirs(result_path)
 model2.save_weights(filepath=result_path+'model2_128_epochs.h5')
 model2.save(result_path+'model2_128_epochs.h5')  # creates a HDF5 file 'my_model.h5'
 

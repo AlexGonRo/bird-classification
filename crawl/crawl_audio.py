@@ -152,13 +152,10 @@ result_df[['id','file']].to_csv('crawl_audio_info/bird_files.csv')
 if "result_df" not in locals():
     result_df = pd.read_csv('crawl_audio_info/bird_api_data.csv')
 
-#genuses = ["Turdus", "Phylloscopus", "Sylvia", "Emberiza"]
-#species = ["migratorius", "sibilatrix", "communis", "citrinella" ]
+genuses = ["sylvia", "phylloscopus", "turdus", "poecile"]     # Brown, Grey/White, Yellow, Red/black
+species = ["communis", "sibilatrix", "migratorius", "atricapillus"]
 
-genuses = ["Sylvia", "Poecile", "Phylloscopus", "Turdus"]     # Brown, Grey/White, Yellow/black, Red/black
-species = ["communis", "atricapillus" ,"sibilatrix", "migratorius"]
-
-# my_records_df = result_df.loc[result_df['gen'].isin(["Turdus", "Phylloscopus", "Sylvia", "Emberiza"])]
+# my_records_df = result_df.loc[result_df['gen'].isin(["turdus_migratorius", "phylloscopus_sibilatrix", "sylvia_communis", "Emberiza"])]
 my_records_df = pd.DataFrame(columns=[recording_cols])
 
 for gen, sp in zip (genuses, species):
