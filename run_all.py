@@ -27,9 +27,9 @@ def my_model(inputShapeAudio, classNumber):
             BatchNormalization(axis=1),
             MaxPooling2D((3,3)),
             Flatten(),
-            Dense(200, activation='relu', name="Dense1"),
-            BatchNormalization(),
-            Dense(classNumber, activation='softmax', name="Dense2")
+            Dense(200, activation='relu', name="Dense1")
+#            BatchNormalization(),
+#            Dense(classNumber, activation='softmax', name="Dense2")
         ])
     img_model = Sequential([
         Convolution2D(32,3,3,border_mode='same',input_shape=(50,50,3)),
@@ -40,15 +40,16 @@ def my_model(inputShapeAudio, classNumber):
         Dropout(0.5),
         Flatten(),
         Dense(128),
-        Dropout(0.5),
-        Dense(classNumber),
-        Activation('softmax')])
+        Dropout(0.5)
+#        Dense(classNumber),
+#        Activation('softmax')
+        ])
 
     final_model = Sequential()
     final_model.add(Merge([audio_model, img_model], mode='concat'))
 
     final_model.add(Dense(256))
-    final_model.add(Activation('softmax'))
+    final_model.add(Dense(classNumber, activation='softmax'))
 
     #img_model.compile(loss='categorical_crossentropy',optimizer='adadelta',metrics=['accuracy'])
     #audio_model.compile(Adam(lr=1e-4), loss='categorical_crossentropy', metrics=['accuracy'])
