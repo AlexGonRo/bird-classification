@@ -19,7 +19,7 @@ from keras.callbacks import ReduceLROnPlateau
 from keras.preprocessing import image, sequence
 from keras.preprocessing.text import Tokenizer
 from keras.callbacks import EarlyStopping
-
+from keras import backend as K
 
 batchSize = 16
 
@@ -115,9 +115,9 @@ def getTestModelNormalize(inputShapeTuple, classNumber):
             BatchNormalization(axis=1),
             MaxPooling2D((3,3)),
             Flatten(),
-            Dense(200, activation='relu'),
+            Dense(200, activation='relu', name="Dense1"),
             BatchNormalization(),
-            Dense(classNumber, activation='softmax')
+            Dense(classNumber, activation='softmax', name="Dense2")
         ])
 
     model.compile(Adam(lr=1e-4), loss='categorical_crossentropy', metrics=['accuracy'])
@@ -131,8 +131,9 @@ valid_path = "data/audio/test"
 result_path = "models/"
 train_batches = get_batches(train_path, genImage, batch_size=batchSize, imageSizeTuple = (64,200))
 valid_batches = get_batches(valid_path, genImage, batch_size=batchSize,  imageSizeTuple = (64,200))
-model2 = getTestModelNormalize(classNumber=132,inputShapeTuple=(64,200,3))
-model2.optimizer.lr.set_value(1e-06)
+model2 = getTestModelNormalize(classNumber=4,inputShapeTuple=(64,200,3))
+#model2.optimizer.lr.set_value(1e-06)
+K.set_value(model2.optimizer.lr, 1e-06)
 model2.fit_generator(
     train_batches,
     steps_per_epoch = np.floor(train_batches.samples/batchSize),
