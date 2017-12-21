@@ -138,25 +138,43 @@ gen_image = ImageDataGenerator(
 
 audio_generator_train = gen_audio.flow_from_directory(
     'data/audio/train',
-    class_mode=None,
+    target_size=(64,200),
+    class_mode="categorical",
+    shuffle=True,
+    batch_size=128,
+    color_mode = "rgb",
     seed=2017)
 im_generator_train = gen_image.flow_from_directory(
     'data/img/train',
-    class_mode=None,
+    target_size=(50,50),
+    class_mode="categorical",
+    shuffle=True,
+    batch_size=128,
+    color_mode = "rgb",
     seed=2017)
 
-train_batches = zip(gen_audio, gen_image)
+train_batches = zip(audio_generator_train, im_generator_train)
+
 
 audio_generator_test = gen_audio.flow_from_directory(
     'data/audio/test',
-    class_mode=None,
+    target_size=(64,200),
+    class_mode="categorical",
+    shuffle=True,
+    batch_size=128,
+    color_mode = "rgb",
     seed=2017)
 im_generator_test = gen_image.flow_from_directory(
     'data/img/test',
-    class_mode=None,
+    target_size=(50,50),
+    class_mode="categorical",
+    shuffle=True,
+    batch_size=128,
+    color_mode = "rgb",
     seed=2017)
 
-valid_batches = zip(gen_audio, gen_image)
+valid_batches = zip(audio_generator_test, im_generator_test)
+
 
 
 # With 512 pictures per batch and about 100 epochs, it should achieve a decent accuracy.
