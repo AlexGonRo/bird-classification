@@ -153,7 +153,14 @@ im_generator_train = gen_image.flow_from_directory(
     color_mode = "rgb",
     seed=2017)
 
-train_batches = zip(audio_generator_train, im_generator_train)
+#train_batches = zip(audio_generator_train, im_generator_train)
+def two_input_generator(gen_1, gen_2):
+    x1,y1 = gen_1.next()
+    x2,y2 = gen_2.next()
+    while True:
+            yield [x1, x2], y1
+
+train_batches = two_input_generator(audio_generator_train, im_generator_train)
 
 
 audio_generator_test = gen_audio.flow_from_directory(
@@ -173,7 +180,7 @@ im_generator_test = gen_image.flow_from_directory(
     color_mode = "rgb",
     seed=2017)
 
-valid_batches = zip(audio_generator_test, im_generator_test)
+valid_batches = two_input_generator(audio_generator_test, im_generator_test)
 
 
 
@@ -190,14 +197,14 @@ early_stopping = EarlyStopping(monitor='val_loss', patience=2)
 #                            batch_size=batchSize, imageSizeAudio = (64,200), imageSizeImg = (50,50))
 #valid_batches = get_batches(valid_audio_path, valid_img_path, gen_all,
 #                            batch_size=batchSize,  imageSizeAudio = (64,200), imageSizeImg = (50,50))
-model = my_model(classNumber=4, inputShapeAudio=(64,200,3), inputShapeImg=(50,50,3))
+model = my_model(classNumber=4, inputShapeAudio=(64,200,3))
 #model.optimizer.lr.set_value(1e-06)
 model.fit_generator(
     train_batches,
-    steps_per_epoch = np.floor(train_batches.samples/batchSize),
+    steps_per_epoch = np.floor(3500/128),
     nb_epoch=30,
     validation_data=valid_batches,
-    validation_steps = np.floor(valid_batches.samples/batchSize),
+    validation_steps = np.floor(900/128),
     callbacks = [early_stopping]
 )
 
