@@ -6,22 +6,25 @@ from keras.layers.normalization import BatchNormalization
 
 class CNN_img:
 
-    def __init__(self, nb_classes, nb_filters, nb_conv, nb_stride, nb_pool, input_shape):
+    def __init__(self, nb_classes, nb_filters, nb_conv, nb_pool, input_shape, last_layers=True):
         self.model = Sequential()
-        self.model.add(BatchNormalization(axis=-1, input_shape = (input_shape[0],input_shape[1],3)))
-        self.model.add(Convolution2D(nb_filters, nb_conv, strides=nb_stride, padding='same',
-                                      activation="relu"))
-        self.model.add(Convolution2D(nb_filters, nb_conv,strides=nb_stride, activation="relu"))
+        self.model.add(Convolution2D(nb_filters, nb_conv, padding='same',
+                                      input_shape=input_shape, activation="relu"))
+        self.model.add(Convolution2D(nb_filters, nb_conv, activation="relu"))
         self.model.add(MaxPooling2D(pool_size=nb_pool))
-        self.model.add(Dropout(0.1))    # Applies Dropout to the input of the next layer
+        self.model.add(Convolution2D(nb_filters, nb_conv, activation="relu"))
+        self.model.add(MaxPooling2D(pool_size=nb_pool))
+#        self.model.add(Dropout(0.1))    # Applies Dropout to the input of the next layer
         self.model.add(Flatten())
-        self.model.add(Dense(512))
-        self.model.add(Dropout(0.1))
-        self.model.add(Dense(nb_classes, activation="softmax"))
+
+#        self.model.add(Dropout(0.1))
+        if last_layers:
+            self.model.add(Dense(256))
+            self.model.add(Dense(nb_classes, activation="softmax"))
 
 
     def compile(self):
-        self.model.compile(loss='categorical_crossentropy', optimizer='adadelta',
+        self.model.compile(loss='categorical_crossentropy', optimizer='adam',
                            metrics=['accuracy'])
 
     def fit(self):

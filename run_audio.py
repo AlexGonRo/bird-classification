@@ -1,15 +1,14 @@
 import numpy as np
-from keras.models import Sequential
-from keras.layers.core import Flatten, Dense
-from keras.layers.normalization import BatchNormalization
-from keras.optimizers import Adam
-from keras.layers.convolutional import *
+from PIL import Image
 from keras.preprocessing import image
 from keras.callbacks import EarlyStopping
 from keras import backend as K
+from keras.preprocessing.image import img_to_array
 import os
 from classifier.cnn_audio import CNN_audio
 from utils.class_weights import class_weights
+from keras.utils import plot_model
+import time
 
 def imageGeneratorSugar(
     featurewise_center,
@@ -27,6 +26,7 @@ def imageGeneratorSugar(
     vertical_flip=False):
 
     genImage = image.ImageDataGenerator(
+        rescale=1. / 255,
         featurewise_center = featurewise_center,
         samplewise_center = samplewise_center,
         featurewise_std_normalization = featurewise_std_normalization,
@@ -80,34 +80,65 @@ genImage = imageGeneratorSugar(
 
 
 # With 512 pictures per batch and about 100 epochs, it should achieve a decent accuracy.
-batchSize = 128*4
+batchSize = 128
 train_path = "data/audio/train"
-valid_path = "data/audio/test"
+path_test = "data/audio/test"
 save_model_path = "models/audio"
 save_pred_path = "results/audio"
+save_model = False
 filters = 32
 kernel_size = (3,3)
 pool = (3,3)
 early_stopping = EarlyStopping(monitor='val_loss', patience=5)
 m,n = 64, 200
-lr = 1e-06
+# lr = 1e-06
 train_batches = get_batches(train_path, genImage, batch_size=batchSize, imageSizeTuple = (m,n))
-valid_batches = get_batches(valid_path, genImage, batch_size=batchSize,  imageSizeTuple = (m,n))
+valid_batches = get_batches(path_test, genImage, batch_size=batchSize, imageSizeTuple = (m, n))
 class_weight = class_weights(train_path)
 
-
 model = CNN_audio(4, filters, kernel_size, pool, input_shape=(m,n,3))
-K.set_value(model.moel.optimizer.lr, lr)
+model.compile()
+plot_model(model.model, to_file='model.png', show_layer_names=False, show_shapes=True)
+# K.set_value(model.model.optimizer.lr, lr)
 model.fit_generator(
     train_batches,
-    train_generator=valid_batches,
+    test_generator=valid_batches,
     nb_epoch = 50,
     class_weight = class_weight,
     callbacks = [early_stopping]
 )
 
-if not os.path.exists(save_model_path):
-    os.makedirs(save_model_path)
-model.save_weights(filepath=save_model_path+'model2_128_epochs.h5')
-model.save(save_model_path+'model2_128_epochs.h5')  # creates a HDF5 file 'my_model.h5'
+if save_model:
+    if not os.path.exists(save_model_path):
+        os.makedirs(save_model_path)
+    model.model.save_weights(filepath=save_model_path+'model2_128_epochs.h5')
+    model.model.save(save_model_path+'model2_128_epochs.h5')  # creates a HDF5 file 'my_model.h5'
 
+# Predict and save predictions for later use
+x_test = []
+y_test = []
+img_names = []
+classes = os.listdir(path_test)
+for fol in classes:
+    imgfiles = os.listdir(path_test + '/' + fol)
+    for img_name in imgfiles:
+        im = Image.open(path_test + '/' + fol + '/' + img_name)
+        im = im.convert(mode='RGB')
+        im = im.resize((m, n))
+        im = img_to_array(im) / 255
+        x_test.append(im)
+        y_test.append(fol)
+        img_names.append(img_name)
+
+x_test = np.array(x_test)
+y_test = np.array(y_test)
+
+predictions = model.predict(x_test)
+
+if not os.path.exists(save_pred_path):
+    os.makedirs(save_pred_path)
+
+with open(save_pred_path + str(time.time()), "w") as f:
+    f.write("name,ground_truth,pred\n")
+    for name, label, pred in zip(img_names, y_test, predictions):
+        f.write(name + ","+ label + "," + str(pred))
