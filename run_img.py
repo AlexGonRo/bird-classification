@@ -6,13 +6,14 @@ from keras.callbacks import EarlyStopping
 from PIL import Image
 import numpy as np
 from keras.preprocessing.image import img_to_array
+from utils.class_weights import class_weights
 
 # input image dimensions
-m,n = 50,50
+m,n = 224,224
 path_train="data/img/train"
 path_test="data/img/test"
 classes=os.listdir(path_train)
-batch_size=32
+batch_size=128
 nb_classes=len(classes)
 nb_epoch=20
 nb_filters=32   # Number of filters
@@ -20,17 +21,18 @@ nb_pool= (2,2)
 nb_conv= (3,3)   # Size of the convolution window
 nb_stride=1 # How much the convolution window moves.
 rs=2017
-nb_epoch=5
-batch_size=5
+nb_epoch=50
 save_model = False
-save_model_path = "models/img"
-save_pred_path = "results/img"
+save_model_path = "models/img/"
+save_pred_path = "results/img/"
+early_stopping = EarlyStopping(monitor='val_loss', patience=5)
+class_weight = class_weights(path_train)
 
 gen_image = ImageDataGenerator(
-    rotation_range=0.1,
-    width_shift_range=0.1,
-    height_shift_range=0.1,
-    zoom_range=0.1,
+    rotation_range=0.05,
+    width_shift_range=0.05,
+    height_shift_range=0.05,
+    zoom_range=0.05,
     fill_mode='constant',
     cval=0.)
 
@@ -52,14 +54,14 @@ im_generator_test = gen_image.flow_from_directory(
     color_mode = "rgb",
     seed=rs)
 
-early_stopping = EarlyStopping(monitor='val_loss', patience=3)
 model = CNN_img(nb_classes, nb_filters, nb_conv, nb_stride, nb_pool, (n,m,3))
+model.compile()
 start = time.process_time()
-model.fit_generator(im_generator_train, im_generator_test, batch_size=batch_size,
-                    nb_epoch=nb_epoch, callbacks = [early_stopping])
+model.fit_generator(im_generator_train, im_generator_test,
+                    nb_epoch=nb_epoch, class_weight=class_weight, callbacks = [early_stopping])
 end = time.process_time()
 
-total_time = start - end
+total_time = end-start
 
 if save_model:
     if not os.path.exists(save_model_path):
