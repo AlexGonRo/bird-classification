@@ -14,23 +14,32 @@ import os
 
 class CNN_audio:
 
-    def __init__(self, classes, filters, kernel_size, pool, input_shape):
-        self.model = Sequential([
-            BatchNormalization(axis=1, input_shape= (input_shape[0], input_shape[1], 3)),
-            Convolution2D(filters, kernel_size, activation='relu'),
-            BatchNormalization(axis=1),
-            MaxPooling2D(pool),
-            Convolution2D(filters*2, kernel_size, activation='relu'),
-            BatchNormalization(axis=1),
-            MaxPooling2D(pool),
-            Flatten(),
-            Dense(200, activation='relu', name="Dense1"),
-            BatchNormalization(),
-            Dense(classes, activation='softmax', name="Dense2")
-        ])
+    def __init__(self, classes, filters, kernel_size, pool, input_shape, last_layers=True):
+        if last_layers:
+            self.model = Sequential([
+                Convolution2D(filters, kernel_size, input_shape=input_shape, activation='relu'),
+                Convolution2D(filters, kernel_size, input_shape=input_shape, activation='relu'),
+                MaxPooling2D(pool),
+                Convolution2D(filters, kernel_size, activation='relu'),
+
+                MaxPooling2D(pool),
+                Flatten(),
+                Dense(256, activation='relu'),
+                Dense(classes, activation='softmax')
+            ])
+        else:
+            self.model = Sequential([
+                Convolution2D(filters, kernel_size, input_shape=input_shape, activation='relu'),
+                Convolution2D(filters, kernel_size, input_shape=input_shape, activation='relu'),
+                MaxPooling2D(pool),
+                Convolution2D(filters, kernel_size, activation='relu'),
+
+                MaxPooling2D(pool),
+                Flatten(),
+            ])
 
     def compile(self):
-        self.model.compile(Adam(lr=1e-4), loss='categorical_crossentropy', metrics=['accuracy'])
+        self.model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
     def fit(self):
         return self.model.fit()
@@ -38,7 +47,7 @@ class CNN_audio:
     def fit_generator(self, train_generator, test_generator,
                     nb_epoch=10, class_weight=[], callbacks=[]):
         return self.model.fit_generator(train_generator, validation_data=test_generator,
-                    epochs=nb_epoch, callbacks = callbacks)
+                    epochs=nb_epoch, class_weight=class_weight, callbacks = callbacks)
 
     def predict(self, x_test):
         return self.model.predict(x_test)

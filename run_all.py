@@ -1,128 +1,42 @@
 import numpy as np
-# A bulk of keras and theano imports
-from keras.models import Sequential, Model
-from keras.layers import Input, Embedding, Reshape, merge, LSTM, Bidirectional
-from keras.layers import TimeDistributed, Activation, SimpleRNN, GRU
-from keras.layers.core import Flatten, Dense, Dropout, Lambda
+from keras.models import Sequential
+from keras.layers.core import Dropout
 from keras.layers.normalization import BatchNormalization
-from keras.optimizers import SGD, RMSprop, Adam
-from keras.metrics import categorical_crossentropy, categorical_accuracy
+from keras.optimizers import Adam
 from keras.layers.convolutional import *
-from keras.callbacks import ReduceLROnPlateau
-from keras.preprocessing import image, sequence
-from keras.preprocessing.text import Tokenizer
+from keras.preprocessing import image
 from keras.callbacks import EarlyStopping
 from keras.preprocessing.image import ImageDataGenerator
-from keras.layers import LSTM, Embedding, TimeDistributed, Dense, RepeatVector, Activation, Flatten, Merge
+from keras.layers import Dense, Activation, Flatten, Merge
 import os
+from keras.utils import plot_model
+import time
+from classifier.cnn_all import CNN_all
+from keras.preprocessing import image
+from keras.callbacks import EarlyStopping
+from keras import backend as K
+from keras.preprocessing.image import img_to_array
+from utils.class_weights import class_weights
+from PIL import Image
 
-#  BASIC CNN MODEL
-def my_model(inputShapeAudio, classNumber):
-    audio_model = Sequential([
-            BatchNormalization(axis=1, input_shape = inputShapeAudio),
-            Convolution2D(32, (3,3), activation='relu'),
-            BatchNormalization(axis=1),
-            MaxPooling2D((3,3)),
-            Convolution2D(64, (3,3), activation='relu'),
-            BatchNormalization(axis=1),
-            MaxPooling2D((3,3)),
-            Flatten(),
-            Dense(200, activation='relu', name="Dense1")
-#            BatchNormalization(),
-#            Dense(classNumber, activation='softmax', name="Dense2")
-        ])
-    img_model = Sequential([
-        Convolution2D(32,3,3,border_mode='same',input_shape=(50,50,3)),
-        Activation('relu'),
-        Convolution2D(32,3,3),
-        Activation('relu'),
-        MaxPooling2D(pool_size=(2,2)),
-        Dropout(0.5),
-        Flatten(),
-        Dense(128),
-        Dropout(0.5)
-#        Dense(classNumber),
-#        Activation('softmax')
-        ])
 
-    final_model = Sequential()
-    final_model.add(Merge([audio_model, img_model], mode='concat'))
 
-    final_model.add(Dense(256))
-    final_model.add(Dense(classNumber, activation='softmax'))
+def two_input_generator(gen_1, gen_2):
+    x1,y1 = gen_1.next()
+    x2,y2 = gen_2.next()
+    while True:
+            yield [x1, x2], y1
 
-    #img_model.compile(loss='categorical_crossentropy',optimizer='adadelta',metrics=['accuracy'])
-    #audio_model.compile(Adam(lr=1e-4), loss='categorical_crossentropy', metrics=['accuracy'])
-    final_model.compile(Adam(lr=1e-4), loss='categorical_crossentropy', metrics=['accuracy'])
-    return final_model
-
-def get_batches(
-    dirnameAudio,
-    dirnameImg,
-    gen_audio=image.ImageDataGenerator(),
-    gen_img=image.ImageDataGenerator(),
-    shuffle=True,
-    batch_size=16,
-    class_mode='categorical',
-    imageSizeAudio = (256,256),
-    imageSizeImg = (50,50),
-    classes = None,
-    color_mode = 'rgb'
-    ):
-    gen_audio.flow_from_directory(
-        dirnameAudio,
-        target_size=imageSizeAudio,
-        class_mode=class_mode,
-        shuffle=shuffle,
-        classes = classes,
-        batch_size=batch_size,
-        color_mode = color_mode
-    )
-
-    return
-
-def audio_generator(
-    featurewise_center,
-    samplewise_center,
-    featurewise_std_normalization,
-    samplewise_std_normalization,
-    rotation_range,
-    width_shift_range,
-    height_shift_range,
-    shear_range,
-    zoom_range,
-    fill_mode='constant',
-    cval=0.,
-    horizontal_flip=False,
-    vertical_flip=False):
-
-    genImage = image.ImageDataGenerator(
-        featurewise_center = featurewise_center,
-        samplewise_center = samplewise_center,
-        featurewise_std_normalization = featurewise_std_normalization,
-        samplewise_std_normalization = samplewise_std_normalization,
-        rotation_range = rotation_range,
-        width_shift_range = width_shift_range,
-        height_shift_range = height_shift_range,
-        shear_range = shear_range,
-        zoom_range =zoom_range,
-        fill_mode = fill_mode,
-        cval= cval,
-        horizontal_flip = horizontal_flip,
-        vertical_flip = vertical_flip)
-    return genImage
-
-# Basically we  can shift sound horizontally and probably scale it a little bit, but rotations and vertical shifts are off-limits because in real life you cannot shift sound like this
-gen_audio = audio_generator(
-    featurewise_center = False,
-    samplewise_center = False,
-    featurewise_std_normalization = False,
-    samplewise_std_normalization = False,
-    rotation_range = 0,
-    width_shift_range = 0.2,
-    height_shift_range = 0,
-    shear_range = 0,
-    zoom_range = 0.1,
+gen_audio = image.ImageDataGenerator(
+    featurewise_center=False,
+    samplewise_center=False,
+    featurewise_std_normalization=False,
+    samplewise_std_normalization=False,
+    rotation_range=0,
+    width_shift_range=0.2,
+    height_shift_range=0,
+    shear_range=0.0,
+    zoom_range=0.1,
     fill_mode='constant',
     cval=0.,
     horizontal_flip=False,
@@ -153,15 +67,7 @@ im_generator_train = gen_image.flow_from_directory(
     color_mode = "rgb",
     seed=2017)
 
-#train_batches = zip(audio_generator_train, im_generator_train)
-def two_input_generator(gen_1, gen_2):
-    x1,y1 = gen_1.next()
-    x2,y2 = gen_2.next()
-    while True:
-            yield [x1, x2], y1
-
 train_batches = two_input_generator(audio_generator_train, im_generator_train)
-
 
 audio_generator_test = gen_audio.flow_from_directory(
     'data/audio/test',
@@ -183,33 +89,79 @@ im_generator_test = gen_image.flow_from_directory(
 valid_batches = two_input_generator(audio_generator_test, im_generator_test)
 
 
-
-# With 512 pictures per batch and about 100 epochs, it should achieve a decent accuracy.
-batchSize = 128*4
-
+batchSize = 128
 train_audio_path = "data/audio/train"
-valid_audio_path = "data/audio/test"
+test_audio_path = "data/audio/test"
 train_img_path = "data/img/train"
-valid_img_path = "data/img/test"
-result_path = "models/all/"
-early_stopping = EarlyStopping(monitor='val_loss', patience=2)
-#train_batches = get_batches(train_audio_path, train_img_path, gen_all,
-#                            batch_size=batchSize, imageSizeAudio = (64,200), imageSizeImg = (50,50))
-#valid_batches = get_batches(valid_audio_path, valid_img_path, gen_all,
-#                            batch_size=batchSize,  imageSizeAudio = (64,200), imageSizeImg = (50,50))
-model = my_model(classNumber=4, inputShapeAudio=(64,200,3))
-#model.optimizer.lr.set_value(1e-06)
-model.fit_generator(
+test_img_path = "data/img/test"
+save_model_path = "models/all/"
+save_pred_path = "results/all"
+early_stopping = EarlyStopping(monitor='val_loss', patience=5)
+class_weight = class_weights(train_audio_path)
+save_model = False
+epochs = 50
+
+# Image parameters
+m_img, n_img = 112, 112
+filters_img =32
+pool_img = (3,3)
+conv_img = (3,3)   # Size of the convolution window
+
+# Audio parameters
+m_audio, n_audio = 64, 200
+filters_audio =32
+pool_audio = (3,3)
+conv_audio = (3,3)   # Size of the convolution window
+
+model = CNN_all(4, filters_img, filters_audio, conv_img, conv_audio,
+                 pool_img, pool_audio, (m_img, n_img, 3), (m_audio, n_audio, 3))
+plot_model(model.model, to_file='model.png', show_layer_names=False, show_shapes=True)
+# model.fit_generator(
     train_batches,
-    steps_per_epoch = np.floor(3500/128),
-    nb_epoch=30,
-    validation_data=valid_batches,
-    validation_steps = np.floor(900/128),
+    test_generator=valid_batches,
+    epoch=epochs,
+    class_weight=class_weight,
     callbacks = [early_stopping]
 )
 
-if not os.path.exists(result_path):
-    os.makedirs(result_path)
-model.save_weights(filepath=result_path+'model2_128_epochs.h5')
-model.save(result_path+'model2_128_epochs.h5')  # creates a HDF5 file 'my_model.h5'
+if save_model:
+    if not os.path.exists(save_model_path):
+        os.makedirs(save_model_path)
+    model.model.save_weights(filepath=save_model_path+'model2_128_epochs.h5')
+    model.model.save(save_model_path+'model2_128_epochs.h5')  # creates a HDF5 file 'my_model.h5'
 
+# Predict and save predictions for later use
+x_test = []
+y_test = []
+img_names = []
+classes = os.listdir(train_audio_path)
+for fol in classes:
+    imgfiles = os.listdir(test_img_path + '/' + fol)
+    audiofiles = os.listdir(test_audio_path + '/' + fol)
+    for img_name, audio_name in zip(imgfiles, audiofiles):
+        # Load image
+        im = Image.open(test_img_path + '/' + fol + '/' + img_name)
+        im = im.convert(mode='RGB')
+        im = im.resize((m_img, n_img))
+        im = img_to_array(im) / 255
+        # Load audio
+        au = Image.open(test_audio_path + '/' + fol + '/' + img_name)
+        au = au.convert(mode='RGB')
+        au = au.resize((m_img, n_img))
+        au = img_to_array(au) / 255
+        x_test.append((au, im))
+        y_test.append(fol)
+        img_names.append(img_name)
+
+x_test = np.array(x_test)
+y_test = np.array(y_test)
+
+predictions = model.predict(x_test)
+
+if not os.path.exists(save_pred_path):
+    os.makedirs(save_pred_path)
+
+with open(save_pred_path + str(time.time()), "w") as f:
+    f.write("name,ground_truth,pred\n")
+    for name, label, pred in zip(img_names, y_test, predictions):
+        f.write(name + ","+ label + "," + str(pred))
