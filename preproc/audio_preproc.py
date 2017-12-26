@@ -67,12 +67,6 @@ for index, row in tqdm(sub_sample_df.iterrows()):
         result_list.append([my_id, row.sp, row.length, row.sr, row.mel_size, row.length_s, counter])
         pointer = pointer + 300
 
-#TODO Delete
-with open("tmp.pkl", "wb") as f:
-    pickle.dump(result_list, f)
-
-#with open("tmp.pkl", "rb") as f:
-#    result_list = pickle.load(f)
 
 # Check how our dataset is now
 # TODO Not implemented

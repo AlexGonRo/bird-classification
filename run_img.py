@@ -1,98 +1,105 @@
-# -*- coding: utf-8 -*-
-
-
-#importing Keras, Library for deep learning 
-from keras.models import Sequential
-from keras.layers.core import Dense, Dropout, Activation, Flatten
-from keras.layers.convolutional import Convolution2D, MaxPooling2D
-from keras.utils import np_utils
-from keras.preprocessing.image import  img_to_array
-from keras import backend as K
-# Fix for Issue - #3 https://github.com/shreyans29/thesemicolon/issues/3
-K.set_image_dim_ordering('th')
-
-import numpy as np
-
-# Image manipulations and arranging data
+from classifier.cnn_img import CNN_img
 import os
+from keras.preprocessing.image import ImageDataGenerator
+import time
+from keras.callbacks import EarlyStopping
 from PIL import Image
-import theano
-theano.config.optimizer="None"
-#Sklearn to modify the data
-
-from sklearn.cross_validation import train_test_split
-
+import numpy as np
+from keras.preprocessing.image import img_to_array
 
 # input image dimensions
 m,n = 50,50
-
-path1="input";
-path2="data/img";
-
-classes=os.listdir(path2)
-x=[]
-y=[]
-for fol in classes:
-    print(fol)
-    imgfiles=os.listdir(path2+'/'+fol);
-    for img in imgfiles:
-        im=Image.open(path2+'/'+fol+'/'+img);
-        im=im.convert(mode='RGB')
-        imrs=im.resize((m,n))
-        imrs=img_to_array(imrs)/255;
-        imrs=imrs.transpose(2,0,1);
-        imrs=imrs.reshape(3,m,n);
-        x.append(imrs)
-        y.append(fol)
-        
-x=np.array(x);
-y=np.array(y);
-
+path_train="data/img/train"
+path_test="data/img/test"
+classes=os.listdir(path_train)
 batch_size=32
 nb_classes=len(classes)
 nb_epoch=20
-nb_filters=32
-nb_pool=2
-nb_conv=3
+nb_filters=32   # Number of filters
+nb_pool= (2,2)
+nb_conv= (3,3)   # Size of the convolution window
+nb_stride=1 # How much the convolution window moves.
+rs=2017
+nb_epoch=5
+batch_size=5
+save_model = False
+save_model_path = "models/img"
+save_pred_path = "results/img"
 
-x_train, x_test, y_train, y_test= train_test_split(x,y,test_size=0.2,random_state=4)
+gen_image = ImageDataGenerator(
+    rotation_range=0.1,
+    width_shift_range=0.1,
+    height_shift_range=0.1,
+    zoom_range=0.1,
+    fill_mode='constant',
+    cval=0.)
 
-uniques, id_train=np.unique(y_train,return_inverse=True)
-Y_train=np_utils.to_categorical(id_train,nb_classes)
-uniques, id_test=np.unique(y_test,return_inverse=True)
-Y_test=np_utils.to_categorical(id_test,nb_classes)
+im_generator_train = gen_image.flow_from_directory(
+    path_train,
+    target_size=(m,n),
+    class_mode="categorical",
+    shuffle=True,
+    batch_size=batch_size,
+    color_mode = "rgb",
+    seed=rs)
 
-model= Sequential()
-model.add(Convolution2D(nb_filters,nb_conv,nb_conv,border_mode='same',input_shape=x_train.shape[1:]))
-model.add(Activation('relu'));
-model.add(Convolution2D(nb_filters,nb_conv,nb_conv));
-model.add(Activation('relu'));
-model.add(MaxPooling2D(pool_size=(nb_pool,nb_pool)));
-model.add(Dropout(0.5));
-model.add(Flatten());
-model.add(Dense(128));
-model.add(Dropout(0.5));
-model.add(Dense(nb_classes));
-model.add(Activation('softmax'));
-model.compile(loss='categorical_crossentropy',optimizer='adadelta',metrics=['accuracy'])
+im_generator_test = gen_image.flow_from_directory(
+    path_test,
+    target_size=(m,n),
+    class_mode="categorical",
+    shuffle=True,
+    batch_size=batch_size,
+    color_mode = "rgb",
+    seed=rs)
 
-nb_epoch=5;
-batch_size=5;
-model.fit(x_train,Y_train,batch_size=batch_size,nb_epoch=nb_epoch,verbose=1,validation_data=(x_test, Y_test))
+early_stopping = EarlyStopping(monitor='val_loss', patience=3)
+model = CNN_img(nb_classes, nb_filters, nb_conv, nb_stride, nb_pool, (n,m,3))
+start = time.process_time()
+model.fit_generator(im_generator_train, im_generator_test, batch_size=batch_size,
+                    nb_epoch=nb_epoch, callbacks = [early_stopping])
+end = time.process_time()
+
+total_time = start - end
+
+if save_model:
+    if not os.path.exists(save_model_path):
+        os.makedirs(save_model_path)
+    model.save_weights(filepath=save_model_path + 'model_img_128_epochs.h5')
+    model.save(save_model_path + 'model2_128_epochs.h5')  # creates a HDF5 file 'my_model.h5'
+
+print("Total CPU time spent: {}".format(total_time))
+
+# Predict and save predictions for later use
+x_test = []
+y_test = []
+img_names = []
+classes = os.listdir(path_test)
+for fol in classes:
+    imgfiles = os.listdir(path_test + '/' + fol)
+    for img_name in imgfiles:
+        im = Image.open(path_test + '/' + fol + '/' + img_name)
+        im = im.convert(mode='RGB')
+        im = im.resize((m, n))
+        im = img_to_array(im)
+        x_test.append(im)
+        y_test.append(fol)
+        img_names.append(img_name)
+
+x_test = np.array(x_test)
+y_test = np.array(y_test)
+
+predictions = model.predict(x_test)
+
+if not os.path.exists(save_pred_path):
+    os.makedirs(save_pred_path)
+
+with open(save_pred_path + str(time.time()), "w") as f:
+    f.write("name,ground_truth,pred\n")
+    for name, label, pred in zip(img_names, y_test, predictions):
+        f.write(name + ","+ label + "," + str(pred))
 
 
-#files=os.listdir(path1);
-#img=files[0] 
-#im = Image.open(path1 + '\\'+img);
-#imrs = im.resize((m,n))
-#imrs=img_to_array(imrs)/255;
-#imrs=imrs.transpose(2,0,1);
-#imrs=imrs.reshape(3,m,n);
 
-#x=[]
-#x.append(imrs)
-#x=np.array(x);
-#predictions = model.predict(x)
 
 
 

@@ -50,7 +50,6 @@ def api_query(query=None, area=None, country=None, page=None):
 
 area_list = ['africa', 'america', 'asia', 'australia', 'europe']
 area_df = pd.DataFrame(columns=['area', 'numRecordings', 'numSpecies', 'numPages'])
-'''
 for area in area_list:
     try:
         result = requests.get(api_query(area=area)) # All info about the recordings from an area. It also gives the info about the recordings of the first page of the area
@@ -67,7 +66,7 @@ for area in area_list:
 ua = UserAgent()
 headers = ua.firefox
 headers = {'User-Agent': headers}
-'''
+
 recording_cols = ['cnt',    # Country
                  'date',    # Date
                  'en',      # Informal name of the bird
@@ -87,7 +86,7 @@ recording_cols = ['cnt',    # Country
                  'url',     # URL of the sound (but not to download)
                  'area',    # Continent
                  'page']
-'''
+
 result_df = pd.DataFrame(columns=[recording_cols])
 
 # Create look up table to know which pages have already been visited
@@ -145,7 +144,7 @@ print(result_df.shape)
 # Save scraped information to a file
 result_df.to_csv('crawl_audio_info/bird_api_data.csv')
 result_df[['id','file']].to_csv('crawl_audio_info/bird_files.csv')
-'''
+
 # We filter the records by the species we want
 # TODO WE COULD ALSO FILTER BY TYPE OF BIRD SOUND
 
