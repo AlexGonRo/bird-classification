@@ -1,12 +1,4 @@
-#open cv
-#import cv2
-# installing open-cv is pain in the ass
-# recently I found ubuntu package here
-# otherwise use anaconda
-# https://pypi.python.org/pypi/opencv-python
-# sci-kit image
 import numpy as np
-# A bulk of keras and theano imports
 from keras.models import Sequential
 from keras.layers.core import Flatten, Dense
 from keras.layers.normalization import BatchNormalization
@@ -16,6 +8,8 @@ from keras.preprocessing import image
 from keras.callbacks import EarlyStopping
 from keras import backend as K
 import os
+from classifier.cnn_audio import CNN_audio
+from utils.class_weights import class_weights
 
 def imageGeneratorSugar(
     featurewise_center,
@@ -85,48 +79,35 @@ genImage = imageGeneratorSugar(
     vertical_flip=False)
 
 
-#  BASIC CNN MODEL
-def getTestModelNormalize(inputShapeTuple, classNumber):
-    model = Sequential([
-            BatchNormalization(axis=1, input_shape = inputShapeTuple),
-            Convolution2D(32, (3,3), activation='relu'),
-            BatchNormalization(axis=1),
-            MaxPooling2D((3,3)),
-            Convolution2D(64, (3,3), activation='relu'),
-            BatchNormalization(axis=1),
-            MaxPooling2D((3,3)),
-            Flatten(),
-            Dense(200, activation='relu', name="Dense1"),
-            BatchNormalization(),
-            Dense(classNumber, activation='softmax', name="Dense2")
-        ])
-
-    model.compile(Adam(lr=1e-4), loss='categorical_crossentropy', metrics=['accuracy'])
-    return model
-
-
 # With 512 pictures per batch and about 100 epochs, it should achieve a decent accuracy.
 batchSize = 128*4
 train_path = "data/audio/train"
 valid_path = "data/audio/test"
-result_path = "models/"
-early_stopping = EarlyStopping(monitor='val_loss', patience=2)
-train_batches = get_batches(train_path, genImage, batch_size=batchSize, imageSizeTuple = (64,200))
-valid_batches = get_batches(valid_path, genImage, batch_size=batchSize,  imageSizeTuple = (64,200))
-model2 = getTestModelNormalize(classNumber=4, inputShapeTuple=(64,200,3))
-#model2.optimizer.lr.set_value(1e-06)
-K.set_value(model2.optimizer.lr, 1e-06)
-model2.fit_generator(
+save_model_path = "models/audio"
+save_pred_path = "results/audio"
+filters = 32
+kernel_size = (3,3)
+pool = (3,3)
+early_stopping = EarlyStopping(monitor='val_loss', patience=5)
+m,n = 64, 200
+lr = 1e-06
+train_batches = get_batches(train_path, genImage, batch_size=batchSize, imageSizeTuple = (m,n))
+valid_batches = get_batches(valid_path, genImage, batch_size=batchSize,  imageSizeTuple = (m,n))
+class_weight = class_weights(train_path)
+
+
+model = CNN_audio(4, filters, kernel_size, pool, input_shape=(m,n,3))
+K.set_value(model.moel.optimizer.lr, lr)
+model.fit_generator(
     train_batches,
-    steps_per_epoch = np.floor(train_batches.samples/batchSize),
-    nb_epoch=30,
-    validation_data=valid_batches,
-    validation_steps = np.floor(valid_batches.samples/batchSize),
+    train_generator=valid_batches,
+    nb_epoch = 50,
+    class_weight = class_weight,
     callbacks = [early_stopping]
 )
 
-if not os.path.exists(result_path):
-    os.makedirs(result_path)
-model2.save_weights(filepath=result_path+'model2_128_epochs.h5')
-model2.save(result_path+'model2_128_epochs.h5')  # creates a HDF5 file 'my_model.h5'
+if not os.path.exists(save_model_path):
+    os.makedirs(save_model_path)
+model.save_weights(filepath=save_model_path+'model2_128_epochs.h5')
+model.save(save_model_path+'model2_128_epochs.h5')  # creates a HDF5 file 'my_model.h5'
 
