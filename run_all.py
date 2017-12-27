@@ -115,8 +115,8 @@ conv_audio = (3,3)   # Size of the convolution window
 
 model = CNN_all(4, filters_img, filters_audio, conv_img, conv_audio,
                  pool_img, pool_audio, (m_img, n_img, 3), (m_audio, n_audio, 3))
-plot_model(model.model, to_file='model.png', show_layer_names=False, show_shapes=True)
-# model.fit_generator(
+#plot_model(model.model, to_file='model.png', show_layer_names=False, show_shapes=True)
+model.fit_generator(
     train_batches,
     test_generator=valid_batches,
     epoch=epochs,
