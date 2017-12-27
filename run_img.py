@@ -8,6 +8,7 @@ import numpy as np
 from keras.preprocessing.image import img_to_array
 from utils.class_weights import class_weights
 from keras.utils import plot_model
+import pickle
 
 # input image dimensions
 m,n = 112,112
@@ -30,10 +31,10 @@ class_weight = class_weights(path_train)
 
 gen_image = ImageDataGenerator(
     rescale = 1./255,
-    rotation_range=0.05,
-    width_shift_range=0.05,
-    height_shift_range=0.05,
-    zoom_range=0.05,
+    rotation_range=0.2,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    zoom_range=0.2,
     fill_mode='constant',
     cval=0.)
 
@@ -57,7 +58,7 @@ im_generator_test = gen_image.flow_from_directory(
 
 model = CNN_img(nb_classes, nb_filters, nb_conv, nb_pool, (n,m,3))
 model.compile()
-plot_model(model.model, to_file='model.png', show_layer_names=False, show_shapes=True)
+#plot_model(model.model, to_file='model.png', show_layer_names=False, show_shapes=True)
 start = time.process_time()
 model.fit_generator(im_generator_train, im_generator_test,
                     nb_epoch=nb_epoch, class_weight=class_weight, callbacks = [early_stopping])
@@ -94,6 +95,10 @@ x_test = np.array(x_test)
 y_test = np.array(y_test)
 
 predictions = model.predict(x_test)
+
+# Save to pkl
+my_dict = {'y_test':y_test, "predictions":predictions, "class_indices":im_generator_train.class_indices}
+pickle.dump(my_dict, open(save_pred_path + str(time.time()) + ".pkl", "wb" ))
 
 if not os.path.exists(save_pred_path):
     os.makedirs(save_pred_path)

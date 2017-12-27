@@ -9,6 +9,7 @@ from classifier.cnn_audio import CNN_audio
 from utils.class_weights import class_weights
 from keras.utils import plot_model
 import time
+import pickle
 
 def imageGeneratorSugar(
     featurewise_center,
@@ -98,7 +99,7 @@ class_weight = class_weights(train_path)
 
 model = CNN_audio(4, filters, kernel_size, pool, input_shape=(m,n,3))
 model.compile()
-plot_model(model.model, to_file='model.png', show_layer_names=False, show_shapes=True)
+#plot_model(model.model, to_file='model.png', show_layer_names=False, show_shapes=True)
 # K.set_value(model.model.optimizer.lr, lr)
 model.fit_generator(
     train_batches,
@@ -135,6 +136,10 @@ x_test = np.array(x_test)
 y_test = np.array(y_test)
 
 predictions = model.predict(x_test)
+
+# Save to pkl
+my_dict = {'y_test':y_test, "predictions":predictions, "class_indices":genImage.class_indices}
+pickle.dump(my_dict, open(save_pred_path + str(time.time()) + ".pkl", "wb" ))
 
 if not os.path.exists(save_pred_path):
     os.makedirs(save_pred_path)

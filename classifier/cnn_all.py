@@ -27,8 +27,7 @@ class CNN_all:
         self.img_model = CNN_img(classes, filters_img, kernel_size_img, pool_img, input_shape_img, False)
         self.model = Sequential()
         self.model.add(Merge([self.audio_model.model, self.img_model.model], mode='concat'))
-        self.model.add(Dense(512))
-        self.model.add(Dense(64))
+        self.model.add(Dense(128))
         self.model.add(Dense(classes, activation='softmax'))
 
 

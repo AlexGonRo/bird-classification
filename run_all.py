@@ -19,7 +19,7 @@ from keras.preprocessing.image import img_to_array
 from utils.class_weights import class_weights
 from PIL import Image
 from keras.callbacks import TensorBoard
-
+import pickle
 
 
 def two_input_generator(gen_1, gen_2):
@@ -45,14 +45,14 @@ epochs = 3
 
 
 # Image parameters
-m_img, n_img = 112, 112
-filters_img =32
+m_img, n_img = 56, 56
+filters_img =16
 pool_img = (3,3)
 conv_img = (3,3)   # Size of the convolution window
 
 # Audio parameters
-m_audio, n_audio = 64, 200
-filters_audio =32
+m_audio, n_audio = 32, 100
+filters_audio = 16
 pool_audio = (3,3)
 conv_audio = (3,3)   # Size of the convolution window
 
@@ -64,10 +64,10 @@ gen_audio = image.ImageDataGenerator(
     featurewise_std_normalization=False,
     samplewise_std_normalization=False,
     rotation_range=0,
-    width_shift_range=0.2,
+    width_shift_range=0.3,
     height_shift_range=0,
     shear_range=0.0,
-    zoom_range=0.1,
+    zoom_range=0.3,
     fill_mode='constant',
     cval=0.,
     horizontal_flip=False,
@@ -75,11 +75,12 @@ gen_audio = image.ImageDataGenerator(
 
 gen_image = ImageDataGenerator(
     rescale = 1./255,
-    rotation_range=0.05,
-    width_shift_range=0.05,
-    height_shift_range=0.05,
-    zoom_range=0.05,
+    rotation_range=0.3,
+    width_shift_range=0.3,
+    height_shift_range=0.3,
+    zoom_range=0.,
     fill_mode='constant',
+    vertical_flip=True,
     cval=0.)
 
 audio_generator_train = gen_audio.flow_from_directory(
@@ -171,6 +172,10 @@ x_audio_test = np.array(x_audio_test)
 y_test = np.array(y_test)
 
 predictions = model.predict([x_audio_test, x_img_test])
+
+# Save to pkl
+my_dict = {'y_test':y_test, "predictions":predictions, "class_indices":im_generator_train.class_indices}
+pickle.dump(my_dict, open(save_pred_path + str(time.time()) + ".pkl", "wb" ))
 
 if not os.path.exists(save_pred_path):
     os.makedirs(save_pred_path)
