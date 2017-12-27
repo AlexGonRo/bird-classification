@@ -42,7 +42,7 @@ class CNN_all:
     def fit_generator(self, train_generator, test_generator,
                     epochs=10, class_weight=[], callbacks=[]):
         return self.model.fit_generator(train_generator, validation_data=test_generator,
-                    epochs=epochs, class_weight=class_weight, callbacks = callbacks)
+                    epochs=epochs, class_weight=class_weight, callbacks = callbacks, steps_per_epoch=29, validation_steps=5)
 
     def predict(self, x_test):
         return self.model.predict(x_test)

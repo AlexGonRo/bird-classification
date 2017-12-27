@@ -126,6 +126,7 @@ for fol in classes:
         im = im.convert(mode='RGB')
         im = im.resize((m, n))
         im = img_to_array(im) / 255
+        im = im.transpose(1,0,2)
         x_test.append(im)
         y_test.append(fol)
         img_names.append(img_name)
@@ -138,7 +139,11 @@ predictions = model.predict(x_test)
 if not os.path.exists(save_pred_path):
     os.makedirs(save_pred_path)
 
-with open(save_pred_path + str(time.time()), "w") as f:
+with open(save_pred_path + str(time.time()) + ".csv", "w") as f:
+    label_map_im_train = (genImage.class_indices)
+    for k, v in label_map_im_train.items():
+        f.write(str(k) + ' >>> ' + str(v) + '\n')
+
     f.write("name,ground_truth,pred\n")
     for name, label, pred in zip(img_names, y_test, predictions):
-        f.write(name + ","+ label + "," + str(pred))
+        f.write(name + ","+ label + "," + str(pred) + "\n")
