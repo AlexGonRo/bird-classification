@@ -20,7 +20,7 @@ from utils.class_weights import class_weights
 from PIL import Image
 from keras.callbacks import TensorBoard
 import pickle
-
+from keras.callbacks import ModelCheckpoint
 
 def two_input_generator(gen_1, gen_2):
     x1,y1 = gen_1.next()
@@ -36,12 +36,13 @@ test_img_path = "data/img/test/"
 save_model_path = "models/all/"
 save_pred_path = "results/all/"
 logs_path = "logs/all"
-early_stopping = EarlyStopping(monitor='val_loss', patience=5)
+early_stopping = EarlyStopping(monitor='val_loss', patience=10)
 logs_callback = TensorBoard(log_dir=logs_path, histogram_freq=0,  
           write_graph=True, write_images=True)
 class_weight = class_weights(train_audio_path)
 save_model = False
-epochs = 3 
+epochs = 50 
+checkpoint = ModelCheckpoint(save_model_path + "my_model.h5", monitor='val_acc', verbose=1, save_best_only=True, mode='max')
 
 
 # Image parameters
@@ -131,7 +132,7 @@ model.fit_generator(
     test_generator=valid_batches,
     epochs=epochs,
     class_weight=class_weight,
-    callbacks = [early_stopping, logs_callback]
+    callbacks = [early_stopping, logs_callback, checkpoint]
 )
 
 if save_model:
@@ -141,6 +142,7 @@ if save_model:
     model.model.save(save_model_path+'model2_128_epochs.h5')  # creates a HDF5 file 'my_model.h5'
 
 # Predict and save predictions for later use
+model.model.load_weights(save_model_path + "my_model.h5")
 x_img_test = []
 x_audio_test = []
 y_test = []
@@ -153,15 +155,15 @@ for fol in classes:
         # Load image
         im = Image.open(test_img_path + '/' + fol + '/' + img_name)
         im = im.convert(mode='RGB')
-        im = im.resize((m_img, n_img))
+        im = im.resize((n_img, m_img))
         im = img_to_array(im) / 255
-        im = im.transpose(1,0,2)
+#        im = im.transpose(1,0,2)
         # Load audio
         au = Image.open(test_audio_path + '/' + fol + '/' + audio_name)
         au = au.convert(mode='RGB')
-        au = au.resize((m_audio, n_audio))
+        au = au.resize((n_audio, m_audio))
         au = img_to_array(au) / 255
-        au = au.transpose(1,0,2)
+#        au = au.transpose(1,0,2)
         x_img_test.append(im)
         x_audio_test.append(au)
         y_test.append(fol)

@@ -9,6 +9,8 @@ from keras.preprocessing.image import img_to_array
 from utils.class_weights import class_weights
 from keras.utils import plot_model
 import pickle
+from keras.callbacks import ModelCheckpoint, TensorBoard
+
 
 # input image dimensions
 m,n = 112,112
@@ -26,8 +28,14 @@ nb_epoch=50
 save_model = False
 save_model_path = "models/img/"
 save_pred_path = "results/img/"
-early_stopping = EarlyStopping(monitor='val_loss', patience=5)
+logs_path = "logs/img/"
+early_stopping = EarlyStopping(monitor='val_loss', patience=10)
 class_weight = class_weights(path_train)
+checkpoint = ModelCheckpoint(save_model_path + "my_model.h5", monitor='val_acc', verbose=1, save_best_only=True, mode='max')
+logs_callback = TensorBoard(log_dir=logs_path, histogram_freq=0,
+          write_graph=True, write_images=True)
+
+
 
 gen_image = ImageDataGenerator(
     rescale = 1./255,
@@ -61,7 +69,7 @@ model.compile()
 #plot_model(model.model, to_file='model.png', show_layer_names=False, show_shapes=True)
 start = time.process_time()
 model.fit_generator(im_generator_train, im_generator_test,
-                    nb_epoch=nb_epoch, class_weight=class_weight, callbacks = [early_stopping])
+                    nb_epoch=nb_epoch, class_weight=class_weight, callbacks = [early_stopping, checkpoint, logs_callback])
 end = time.process_time()
 
 total_time = end-start
@@ -75,6 +83,7 @@ if save_model:
 print("Total CPU time spent: {}".format(total_time))
 
 # Predict and save predictions for later use
+model.model.load_weights(save_model_path + "my_model.h5")
 x_test = []
 y_test = []
 img_names = []
@@ -84,9 +93,9 @@ for fol in classes:
     for img_name in imgfiles:
         im = Image.open(path_test + '/' + fol + '/' + img_name)
         im = im.convert(mode='RGB')
-        im = im.resize((m, n))
+        im = im.resize((n, m))
         im = img_to_array(im) / 255
-        im = im.transpose(1,0,2)
+#        im = im.transpose(1,0,2)
         x_test.append(im)
         y_test.append(fol)
         img_names.append(img_name)
